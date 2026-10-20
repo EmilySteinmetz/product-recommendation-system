@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: goodfind
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: GOODFIND_DATA_DIR
+        value: /var/data
+    disk:
+      name: goodfind-data
+      mountPath: /var/data
+      sizeGB: 1

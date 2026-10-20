@@ -10,7 +10,7 @@ import robotsParser from "robots-parser";
 
 const scrypt = promisify(scryptCallback);
 const root = dirname(fileURLToPath(import.meta.url));
-const dataDirectory = resolve(root, "data");
+const dataDirectory = resolve(process.env.GOODFIND_DATA_DIR ?? resolve(root, "data"));
 await mkdir(dataDirectory, { recursive: true });
 
 const database = new DatabaseSync(resolve(dataDirectory, "goodfind.sqlite"));
@@ -78,7 +78,7 @@ function digest(value) {
 }
 
 function sessionCookie(token, request, maxAge = 7 * 24 * 60 * 60) {
-  const secure = request.socket.encrypted ? "; Secure" : "";
+  const secure = request.socket.encrypted || request.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
   return `goodfind_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }
 
@@ -514,8 +514,9 @@ const server = createServer(async (request, response) => {
 });
 
 const port = Number(process.env.PORT ?? 3000);
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Goodfind is running at http://127.0.0.1:${port}`);
+const host = process.env.HOST ?? "127.0.0.1";
+server.listen(port, host, () => {
+  console.log(`Goodfind is running at http://${host}:${port}`);
 });
 
 function shutdown() {
