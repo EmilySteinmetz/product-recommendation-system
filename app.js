@@ -20,6 +20,8 @@ let searchOffers = [];
 let loadedRetailers = [];
 let searchMessage = "";
 
+class ApiUnavailableError extends Error {}
+
 const retailerNames = ["Best Buy", "Amazon", "Target", "Walmart"];
 const demoCatalog = [
   { name: "Wireless over-ear headphones", category: "Audio", keywords: ["wireless", "headphones", "audio", "bluetooth"], price: 79.99, rating: 4.4, reviews: 3260, purchases: 1400 },
@@ -43,6 +45,21 @@ function escapeHtml(value) {
 
 function formatCount(value) {
   return value === null || value === undefined ? "Not reported" : countFormat.format(value);
+}
+
+async function readApiJson(response) {
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.includes("application/json") && !contentType.includes("+json")) {
+    throw new ApiUnavailableError("This site is running without the Goodfind API.");
+  }
+  try {
+    return await response.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new ApiUnavailableError("The Goodfind API returned an invalid response.");
+    }
+    throw error;
+  }
 }
 
 function retailerUrl(retailer, query) {
@@ -295,13 +312,13 @@ async function loadResults() {
   try {
     const params = new URLSearchParams({ q: searchQuery, retailer });
     const response = await fetch(`/api/search?${params}`);
+    if (sequence !== searchSequence) return;
     if (response.status === 404) {
       activateDemoMode();
       renderDemoResults(sequence, searchQuery);
       return;
     }
-    const result = await response.json();
-    if (sequence !== searchSequence) return;
+    const result = await readApiJson(response);
     if (!response.ok) throw new Error(result.error || "Search could not be completed.");
 
     searchOffers = result.offers;
@@ -315,7 +332,7 @@ async function loadResults() {
     }
   } catch (error) {
     if (sequence !== searchSequence) return;
-    if (error instanceof TypeError) {
+    if (error instanceof ApiUnavailableError || error instanceof TypeError) {
       activateDemoMode();
       renderDemoResults(sequence, searchQuery);
       return;
@@ -390,11 +407,11 @@ async function refreshSession() {
       return;
     }
     if (!response.ok) throw new Error("Could not check account session.");
-    const result = await response.json();
+    const result = await readApiJson(response);
     currentUser = result.user;
     updateAccountButton();
   } catch (error) {
-    if (error instanceof TypeError) {
+    if (error instanceof ApiUnavailableError || error instanceof TypeError) {
       activateDemoMode();
       return;
     }
@@ -479,7 +496,7 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
         password: form.elements.password.value
       })
     });
-    const result = await response.json();
+    const result = await readApiJson(response);
     if (!response.ok) throw new Error(result.error || "Account request failed.");
     currentUser = result.user;
     updateAccountButton();
@@ -487,6 +504,11 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
     showToast(accountMode === "register" ? "Account created. You can start comparing." : "You're signed in. Search is ready.");
     if (searchInput.value.trim()) await loadResults();
   } catch (error) {
+    if (error instanceof ApiUnavailableError || error instanceof TypeError) {
+      activateDemoMode();
+      document.querySelector("#account-message").textContent = "Accounts are unavailable in this static demo. You can search and compare as a guest.";
+      return;
+    }
     document.querySelector("#account-message").textContent = error.message;
   } finally {
     button.disabled = false;
