@@ -205,7 +205,7 @@ async function loadResults() {
     productGrid.hidden = true;
     document.querySelector("#result-count").textContent = "Waiting for search";
     document.querySelector("#result-label").textContent = "Search a product to see live listings";
-    displayEmpty("Start with a product search.", "Sign in, enter a product, and search retailer listings. Nothing is pre-filled with sample offers.");
+    displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can compare as a guest or sign in for an account. Nothing is pre-filled with sample offers.");
     renderRetailerSearchLinks();
     return;
   }
@@ -214,12 +214,6 @@ async function loadResults() {
     loadedRetailers = [];
     searchMessage = "";
   }
-  if (!currentUser) {
-    openAccount();
-    document.querySelector("#account-message").textContent = "Please sign in or create an account before searching.";
-    return;
-  }
-
   const sequence = searchSequence;
   const retailer = filters.retailer.value;
   if (retailer === "Target" || retailer === "Walmart") {
@@ -367,6 +361,7 @@ document.querySelector("#reset-filters").addEventListener("click", () => {
 document.querySelector("#account-open").addEventListener("click", openAccount);
 document.querySelector("#account-close").addEventListener("click", closeAccount);
 document.querySelector("#overlay").addEventListener("click", closeAccount);
+document.querySelector("#continue-as-guest").addEventListener("click", closeAccount);
 document.querySelectorAll(".account-tab").forEach((tab) => {
   tab.addEventListener("click", () => setAccountMode(tab.dataset.mode));
 });
@@ -420,7 +415,7 @@ document.querySelector("#account-logout").addEventListener("click", async () => 
     searchMessage = "";
     document.querySelector("#result-count").textContent = "Waiting for search";
     document.querySelector("#result-label").textContent = "Search a product to see live listings";
-    displayEmpty("Sign in to compare products.", "Search requires an account, as specified in the case study.");
+    displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can continue as a guest or sign in for an account.");
     renderRetailerSearchLinks();
     showToast("You're signed out.");
   } catch (error) {
@@ -432,5 +427,5 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector("#account-modal").classList.contains("is-open")) closeAccount();
 });
 
-displayEmpty("Start with a product search.", "Sign in, enter a product, and search retailer listings. Nothing is pre-filled with sample offers.");
+displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can compare as a guest or sign in for an account. Nothing is pre-filled with sample offers.");
 refreshSession();

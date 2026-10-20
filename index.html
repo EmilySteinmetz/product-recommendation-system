@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=7">
-    <script src="app.js?v=7" defer></script>
+    <script src="app.js?v=8" defer></script>
   </head>
   <body>
     <div class="announcement">
@@ -160,8 +160,9 @@
         <label class="form-field">Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
         <label class="form-field">Password<input id="account-password" name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"></label>
         <button class="button button-dark account-submit" id="account-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-        <p class="account-note">Passwords are securely hashed on this server and are not sent to retailers.</p>
+        <p class="account-note">You can compare as a guest. Account passwords are securely hashed on this server and are not sent to retailers.</p>
         <p class="account-message" id="account-message" aria-live="polite"></p>
+        <button class="text-button" id="continue-as-guest" type="button">Continue as guest</button>
         <button class="text-button account-logout" id="account-logout" type="button" hidden>Sign out</button>
       </form>
     </section>

@@ -1,6 +1,6 @@
 # Goodfind
 
-Goodfind is a local product-comparison website. It has persistent accounts, live retailer search, product comparisons, rating/review/purchase filters, and links to retailer listings.
+Goodfind is a local product-comparison website. Product search and comparison are available to guests; creating an account or signing in is optional. It also has live retailer search, rating/review/purchase filters, and links to retailer listings.
 
 ## Run locally
 

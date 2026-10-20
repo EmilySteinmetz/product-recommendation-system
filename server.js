@@ -374,10 +374,6 @@ async function searchAmazon(query) {
 }
 
 async function handleSearch(request, response, url) {
-  if (!sessionUser(request)) {
-    sendJson(response, 401, { error: "Sign in before searching for products." });
-    return;
-  }
   const query = (url.searchParams.get("q") ?? "").trim();
   if (query.length < 2 || query.length > 120) {
     sendJson(response, 400, { error: "Search terms must be between 2 and 120 characters." });
