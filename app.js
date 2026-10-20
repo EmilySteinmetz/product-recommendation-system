@@ -1,6 +1,7 @@
 const searchInput = document.querySelector("#search-input");
 const productGrid = document.querySelector("#product-grid");
 const noResults = document.querySelector("#no-results");
+const accountNote = document.querySelector("#account-note");
 const filters = {
   retailer: document.querySelector("#retailer-filter"),
   rating: document.querySelector("#rating-filter"),
@@ -12,6 +13,7 @@ const filters = {
 let searchQuery = "";
 let accountMode = "login";
 let currentUser = null;
+let staticDemoMode = location.protocol === "file:" || location.hostname.toLowerCase().endsWith(".github.io");
 let searchSequence = 0;
 let toastTimeout;
 let searchOffers = [];
@@ -19,6 +21,15 @@ let loadedRetailers = [];
 let searchMessage = "";
 
 const retailerNames = ["Best Buy", "Amazon", "Target", "Walmart"];
+const demoCatalog = [
+  { name: "Wireless over-ear headphones", category: "Audio", keywords: ["wireless", "headphones", "audio", "bluetooth"], price: 79.99, rating: 4.4, reviews: 3260, purchases: 1400 },
+  { name: "Insulated stainless-steel water bottle", category: "Home & kitchen", keywords: ["water", "bottle", "insulated", "kitchen"], price: 24.99, rating: 4.6, reviews: 2180, purchases: 1100 },
+  { name: "Programmable drip coffee maker", category: "Home & kitchen", keywords: ["coffee", "maker", "kitchen", "appliance"], price: 54.99, rating: 4.2, reviews: 1540, purchases: 900 },
+  { name: "Everyday cotton T-shirt", category: "Clothing", keywords: ["clothes", "clothing", "shirt", "apparel", "cotton"], price: 18.99, rating: 4.1, reviews: 890, purchases: 600 },
+  { name: "Cordless power drill", category: "Tools", keywords: ["machinery", "drill", "tool", "power"], price: 99.99, rating: 4.5, reviews: 2760, purchases: 1300 },
+  { name: "Over-the-counter pain relief tablets", category: "Health & wellness", keywords: ["medicine", "health", "pain", "relief", "tablets"], price: 11.99, rating: 4.3, reviews: 740, purchases: 500 },
+  { name: "Lightweight everyday laptop", category: "Computers", keywords: ["laptop", "computer", "electronics"], price: 649.99, rating: 4.4, reviews: 1320, purchases: 700 }
+];
 const countFormat = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1
@@ -45,6 +56,37 @@ function retailerUrl(retailer, query) {
   return urls[retailer] ?? "";
 }
 
+function demoOffersForQuery(query) {
+  const terms = query.toLocaleLowerCase().match(/[a-z0-9]+/g) ?? [];
+  let products = demoCatalog.filter((product) => terms.some((term) => (
+    product.keywords.some((keyword) => keyword.includes(term) || term.includes(keyword))
+  )));
+  if (!products.length) {
+    products = [{
+      name: `Sample ${query}`,
+      category: "Demonstration product",
+      price: 39.99,
+      rating: 4.2,
+      reviews: 320,
+      purchases: 180
+    }];
+  }
+
+  return products.flatMap((product) => retailerNames.map((retailer, index) => {
+    const price = Math.max(4.99, product.price * (1 + (index - 1.5) * 0.07));
+    return {
+      name: product.name,
+      category: product.category,
+      retailer,
+      price: Math.round(price * 100) / 100,
+      rating: Math.max(3.5, Math.min(5, product.rating + (1 - index) * 0.1)),
+      reviewCount: Math.max(25, product.reviews + (index - 1) * 140),
+      purchaseCount: Math.max(20, product.purchases + (1 - index) * 100),
+      url: retailerUrl(retailer, query)
+    };
+  }));
+}
+
 function safeRetailerUrl(retailer, value) {
   try {
     const url = new URL(value);
@@ -66,6 +108,7 @@ function setStatus(message, state = "ready") {
     loading: "SEARCHING",
     error: "SEARCH ISSUE",
     external: "RETAILER SITE",
+    demo: "SAMPLE DEMO",
     ready: "LIVE SEARCH"
   }[state];
   status.dataset.state = state;
@@ -142,16 +185,16 @@ function renderResults(offers, message = "") {
           <div class="comparison-product-copy">
             <span class="product-category">${escapeHtml(offer.category)}</span>
             <h3>${escapeHtml(offer.name)}</h3>
-            <span class="offer-badge">LIVE RETAILER LISTING</span>
+            <span class="offer-badge">${staticDemoMode ? "SAMPLE DEMO DATA" : "LIVE RETAILER LISTING"}</span>
           </div>
         </div>
         <div class="offer-details">
           <div class="retailer-name"><span class="retailer-mark">${escapeHtml(offer.retailer.slice(0, 1))}</span><strong>${escapeHtml(offer.retailer)}</strong></div>
-          <div class="offer-metric offer-price"><span>Listed price</span><strong>${priceText}</strong></div>
+          <div class="offer-metric offer-price"><span>${staticDemoMode ? "Sample price" : "Listed price"}</span><strong>${priceText}</strong></div>
           <div class="offer-metric"><span>Rating</span><strong>${ratingText}</strong></div>
           <div class="offer-metric"><span>Reviews</span><strong>${formatCount(offer.reviewCount)}</strong></div>
           <div class="offer-metric"><span>Purchases</span><strong>${escapeHtml(offer.purchaseLabel ?? formatCount(offer.purchaseCount))}</strong></div>
-          <a class="retailer-link" href="${escapeHtml(retailerLink)}" target="_blank" rel="noopener noreferrer">View listing at ${escapeHtml(offer.retailer)} <span aria-hidden="true">↗</span></a>
+          <a class="retailer-link" href="${escapeHtml(retailerLink)}" target="_blank" rel="noopener noreferrer">${staticDemoMode ? "Search at" : "View listing at"} ${escapeHtml(offer.retailer)} <span aria-hidden="true">↗</span></a>
         </div>
       </article>`;
   }).join("");
@@ -159,9 +202,9 @@ function renderResults(offers, message = "") {
   productGrid.hidden = matches.length === 0;
   noResults.hidden = matches.length !== 0;
   document.querySelector("#result-count").textContent = `${matches.length} ${matches.length === 1 ? "listing" : "listings"}`;
-  document.querySelector("#result-label").textContent = searchQuery ? `Results for “${searchQuery}”` : "Search a product to see live listings";
+  document.querySelector("#result-label").textContent = searchQuery ? `Results for “${searchQuery}”` : "Search a product to compare listings";
   if (!matches.length) {
-    const externalRetailer = filters.retailer.value === "Target" || filters.retailer.value === "Walmart";
+    const externalRetailer = !staticDemoMode && (filters.retailer.value === "Target" || filters.retailer.value === "Walmart");
     const selectedOffers = filters.retailer.value === "all"
       ? offers
       : offers.filter((offer) => offer.retailer === filters.retailer.value);
@@ -193,6 +236,24 @@ function renderExternalRetailerSearch(retailer) {
   renderRetailerSearchLinks();
 }
 
+function activateDemoMode() {
+  staticDemoMode = true;
+  currentUser = null;
+  updateAccountButton();
+  accountNote.textContent = "Accounts need the Goodfind server. Search and compare are available here as a guest.";
+  document.querySelector(".data-disclaimer").textContent = "Demonstration sample data only — prices, ratings, reviews, and purchase counts are fictional and are not current retailer offers. Retailer links open each store's search page. Search and comparison are available without an account.";
+  setStatus("GitHub Pages uses fictional demonstration data. Search and compare as a guest.", "demo");
+}
+
+function renderDemoResults(sequence, query) {
+  if (sequence !== searchSequence) return;
+  searchOffers = demoOffersForQuery(query);
+  loadedRetailers = retailerNames;
+  searchMessage = "Demonstration sample data only. These listings and figures are fictional and are not current retailer offers. Retailer links open each store's search page.";
+  setStatus(searchMessage, "demo");
+  renderResults(searchOffers, searchMessage);
+}
+
 async function loadResults() {
   searchSequence++;
   const previousQuery = searchQuery;
@@ -204,7 +265,7 @@ async function loadResults() {
     productGrid.innerHTML = "";
     productGrid.hidden = true;
     document.querySelector("#result-count").textContent = "Waiting for search";
-    document.querySelector("#result-label").textContent = "Search a product to see live listings";
+    document.querySelector("#result-label").textContent = "Search a product to compare listings";
     displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can compare as a guest or sign in for an account. Nothing is pre-filled with sample offers.");
     renderRetailerSearchLinks();
     return;
@@ -216,6 +277,10 @@ async function loadResults() {
   }
   const sequence = searchSequence;
   const retailer = filters.retailer.value;
+  if (staticDemoMode) {
+    renderDemoResults(sequence, searchQuery);
+    return;
+  }
   if (retailer === "Target" || retailer === "Walmart") {
     renderExternalRetailerSearch(retailer);
     return;
@@ -230,6 +295,11 @@ async function loadResults() {
   try {
     const params = new URLSearchParams({ q: searchQuery, retailer });
     const response = await fetch(`/api/search?${params}`);
+    if (response.status === 404) {
+      activateDemoMode();
+      renderDemoResults(sequence, searchQuery);
+      return;
+    }
     const result = await response.json();
     if (sequence !== searchSequence) return;
     if (!response.ok) throw new Error(result.error || "Search could not be completed.");
@@ -245,6 +315,11 @@ async function loadResults() {
     }
   } catch (error) {
     if (sequence !== searchSequence) return;
+    if (error instanceof TypeError) {
+      activateDemoMode();
+      renderDemoResults(sequence, searchQuery);
+      return;
+    }
     setStatus(error.message, "error");
     document.querySelector("#result-count").textContent = "Search unavailable";
     displayEmpty("Live search could not be completed.", error.message, retailerUrl(retailer === "all" ? "Best Buy" : retailer, searchQuery));
@@ -304,13 +379,25 @@ function showToast(message) {
 }
 
 async function refreshSession() {
+  if (staticDemoMode) {
+    activateDemoMode();
+    return;
+  }
   try {
     const response = await fetch("/api/auth/me");
+    if (response.status === 404) {
+      activateDemoMode();
+      return;
+    }
     if (!response.ok) throw new Error("Could not check account session.");
     const result = await response.json();
     currentUser = result.user;
     updateAccountButton();
   } catch (error) {
+    if (error instanceof TypeError) {
+      activateDemoMode();
+      return;
+    }
     setStatus(error.message, "error");
   }
 }
@@ -331,6 +418,11 @@ document.querySelectorAll("[data-query]").forEach((button) => {
 
 filters.retailer.addEventListener("change", () => {
   if (!searchQuery) return;
+  if (staticDemoMode) {
+    setStatus(searchMessage, "demo");
+    renderResults(searchOffers, searchMessage);
+    return;
+  }
   const retailer = filters.retailer.value;
   if (retailer === "Target" || retailer === "Walmart") {
     renderExternalRetailerSearch(retailer);
@@ -345,7 +437,7 @@ filters.retailer.addEventListener("change", () => {
 
 [filters.rating, filters.reviews, filters.purchases, filters.sort].forEach((filter) => {
   filter.addEventListener("change", () => {
-    if (searchQuery && filters.retailer.value !== "Target" && filters.retailer.value !== "Walmart") {
+    if (searchQuery && (staticDemoMode || (filters.retailer.value !== "Target" && filters.retailer.value !== "Walmart"))) {
       renderResults(searchOffers, searchMessage);
     }
   });
@@ -369,6 +461,10 @@ document.querySelectorAll(".account-tab").forEach((tab) => {
 document.querySelector("#account-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+  if (staticDemoMode) {
+    document.querySelector("#account-message").textContent = "Accounts are unavailable in this static demo. You can search and compare as a guest.";
+    return;
+  }
   if (!form.reportValidity()) return;
   const button = document.querySelector("#account-submit");
   button.disabled = true;
@@ -398,6 +494,7 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
 });
 
 document.querySelector("#account-logout").addEventListener("click", async () => {
+  if (staticDemoMode) return;
   try {
     const response = await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     if (!response.ok) throw new Error("Sign out failed. Please try again.");
@@ -414,7 +511,7 @@ document.querySelector("#account-logout").addEventListener("click", async () => 
     loadedRetailers = [];
     searchMessage = "";
     document.querySelector("#result-count").textContent = "Waiting for search";
-    document.querySelector("#result-label").textContent = "Search a product to see live listings";
+    document.querySelector("#result-label").textContent = "Search a product to compare listings";
     displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can continue as a guest or sign in for an account.");
     renderRetailerSearchLinks();
     showToast("You're signed out.");
@@ -427,5 +524,6 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector("#account-modal").classList.contains("is-open")) closeAccount();
 });
 
+if (staticDemoMode) activateDemoMode();
 displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can compare as a guest or sign in for an account. Nothing is pre-filled with sample offers.");
 refreshSession();

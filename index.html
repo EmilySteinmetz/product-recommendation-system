@@ -4,25 +4,25 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f6f5f1">
-    <meta name="description" content="Search live retailer listings and compare product details, ratings, and reviews in one place.">
+    <meta name="description" content="Search and compare retailer listings, or explore clearly labeled sample results on the GitHub Pages demo.">
     <title>Goodfind — Compare before you buy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=7">
-    <script src="app.js?v=8" defer></script>
+    <link rel="stylesheet" href="styles.css?v=8">
+    <script src="app.js?v=9" defer></script>
   </head>
   <body>
     <div class="announcement">
       <span>Less searching. More finding.</span>
-      <span class="announcement-detail">Live retailer listings and store links in one search</span>
+      <span class="announcement-detail">Compare retailer listings, with no account required</span>
       <span class="announcement-right">Find your good deal <span aria-hidden="true">↗</span></span>
     </div>
     <header class="site-header">
       <a class="wordmark" href="#" aria-label="Goodfind home">good<span>find</span><i>.</i></a>
       <nav class="main-nav" aria-label="Main navigation">
         <a href="#search" class="nav-link active">Compare</a>
-        <a href="#results" class="nav-link">Live results</a>
+        <a href="#results" class="nav-link">Search results</a>
         <a href="#how-it-works" class="nav-link">How it works</a>
       </nav>
       <div class="header-actions">
@@ -38,7 +38,7 @@
         <div class="hero-copy">
           <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR SMARTER WAY TO SHOP</p>
           <h1 id="hero-title">Find it once.<br>Compare it <em>better.</em></h1>
-          <p class="hero-description">Search Amazon and Best Buy listings live. Compare published prices, ratings, reviews, and recent purchase activity when each store provides them.</p>
+          <p class="hero-description">Compare prices, ratings, reviews, and retailer options without an account. The GitHub Pages demo uses clearly labeled sample data.</p>
           <form class="product-search" id="search-form" role="search">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
             <label class="visually-hidden" for="search-input">Search for a product</label>
@@ -46,7 +46,7 @@
             <button type="submit">Search <span aria-hidden="true">→</span></button>
           </form>
           <div class="search-examples"><span>Try:</span><button type="button" data-query="medicine">Medicine</button><button type="button" data-query="clothes">Clothes</button><button type="button" data-query="machinery">Machinery</button></div>
-          <div class="hero-note"><span class="note-star">✳</span> Live listings. Store data, clearly labeled.</div>
+          <div class="hero-note"><span class="note-star">✳</span> Search as a guest. Account is optional.</div>
         </div>
         <div class="hero-image">
           <img src="https://images.unsplash.com/photo-1490312278390-ab64016e0aa9?auto=format&fit=crop&w=1300&q=85" alt="A calm, sunlit space for making thoughtful choices">
@@ -69,9 +69,9 @@
             <p class="eyebrow">LESS TAB-HOPPING, MORE CONFIDENCE</p>
             <h2>Compare your <em>options.</em></h2>
           </div>
-          <p class="section-blurb">Compare the details stores publish.<br>Open each retailer for current pricing.</p>
+          <p class="section-blurb">Compare sample or live details.<br>Open each retailer for current listings.</p>
         </div>
-        <div class="demo-notice"><span id="connection-status">LIVE SEARCH</span><span id="source-note">All stores searches Amazon and Best Buy. Their robots.txt policies are checked before each request. Target and Walmart open their official search pages because this app does not extract their listings.</span></div>
+        <div class="demo-notice"><span id="connection-status">SEARCH READY</span><span id="source-note">Search and compare as a guest. Results are live when the server is available; GitHub Pages uses clearly labeled sample data.</span></div>
         <div class="filter-panel" aria-label="Comparison filters">
           <label class="filter-control">Search in
             <select id="retailer-filter" aria-label="Choose retailer">
@@ -116,7 +116,7 @@
             </select>
           </label>
         </div>
-        <div class="results-summary"><span id="result-label">Search a product to see live listings</span><span id="result-count">Waiting for search</span></div>
+        <div class="results-summary"><span id="result-label">Search a product to compare listings</span><span id="result-count">Waiting for search</span></div>
         <div class="product-grid comparison-grid" id="product-grid" aria-live="polite"></div>
         <div class="empty-results" id="no-results" hidden>
           <span>✳</span><h3 id="empty-title">No matching products just yet.</h3><p id="empty-message">Search for a product to see current retailer listings.</p>
@@ -126,7 +126,7 @@
           <span>Search this product at</span>
           <div id="retailer-search-buttons"></div>
         </div>
-        <p class="data-disclaimer">Live search currently compares Amazon and Best Buy when their robots.txt policies allow access. Prices, ratings, reviews, and recent purchase counts appear only when published in the returned listings; missing details are not estimated. Target and Walmart links open those stores' current results. Confirm price, shipping, availability, and product match with the retailer.</p>
+        <p class="data-disclaimer">Search and comparison do not require an account. On GitHub Pages, listings are demonstration sample data, not current retailer offers. Retailer links open each store's search page; confirm current price, shipping, availability, and product details with the retailer.</p>
       </section>
 
       <section class="how-section" id="how-it-works">
@@ -142,7 +142,7 @@
     <footer class="site-footer">
       <a class="wordmark footer-wordmark" href="#">good<span>find</span><i>.</i></a>
       <p>Search less. Compare better. Choose for yourself.</p>
-      <span>© 2026 Goodfind · Local comparison prototype</span>
+      <span>© 2026 Goodfind · Product comparison demo</span>
     </footer>
 
     <div class="overlay" id="overlay" hidden></div>
@@ -160,7 +160,7 @@
         <label class="form-field">Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
         <label class="form-field">Password<input id="account-password" name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"></label>
         <button class="button button-dark account-submit" id="account-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-        <p class="account-note">You can compare as a guest. Account passwords are securely hashed on this server and are not sent to retailers.</p>
+        <p class="account-note" id="account-note">You can compare as a guest. Account passwords are securely hashed on this server and are not sent to retailers.</p>
         <p class="account-message" id="account-message" aria-live="polite"></p>
         <button class="text-button" id="continue-as-guest" type="button">Continue as guest</button>
         <button class="text-button account-logout" id="account-logout" type="button" hidden>Sign out</button>
