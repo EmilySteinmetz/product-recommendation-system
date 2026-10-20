@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
-    <script src="app.js?v=10" defer></script>
+    <link rel="stylesheet" href="styles.css?v=9">
+    <script src="app.js?v=13" defer></script>
   </head>
   <body>
     <div class="announcement">
@@ -30,6 +30,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"></circle><path d="M5 20c.5-3.5 3.1-5.5 7-5.5s6.5 2 7 5.5"></path></svg>
           <span id="account-label">Sign in</span>
         </button>
+        <button class="account-trigger saved-trigger" id="saved-products-open" type="button" hidden>Saved products</button>
       </div>
     </header>
 
@@ -38,14 +39,14 @@
         <div class="hero-copy">
           <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR SMARTER WAY TO SHOP</p>
           <h1 id="hero-title">Find it once.<br>Compare it <em>better.</em></h1>
-          <p class="hero-description">Compare prices, ratings, reviews, and retailer options without an account. The GitHub Pages demo uses clearly labeled sample data.</p>
+          <p class="hero-description">Compare sample headphones and cameras across retailers. Browse as a guest, filter ratings and reviews, or save products to a demo account.</p>
           <form class="product-search" id="search-form" role="search">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
             <label class="visually-hidden" for="search-input">Search for a product</label>
-            <input id="search-input" type="search" placeholder="Try “wireless headphones”" autocomplete="off" minlength="2" maxlength="120" required>
+            <input id="search-input" type="search" placeholder="Try “headphones” or “camera”" autocomplete="off" minlength="2" maxlength="120" required>
             <button type="submit">Search <span aria-hidden="true">→</span></button>
           </form>
-          <div class="search-examples"><span>Try:</span><button type="button" data-query="medicine">Medicine</button><button type="button" data-query="clothes">Clothes</button><button type="button" data-query="machinery">Machinery</button></div>
+          <div class="search-examples"><span>Try:</span><button type="button" data-query="headphones">Headphones</button><button type="button" data-query="camera">Camera</button></div>
           <div class="hero-note"><span class="note-star">✳</span> Search as a guest. Account is optional.</div>
         </div>
         <div class="hero-image">
@@ -126,13 +127,22 @@
           <span>Search this product at</span>
           <div id="retailer-search-buttons"></div>
         </div>
-        <p class="data-disclaimer">Search and comparison do not require an account. On GitHub Pages, listings are demonstration sample data, not current retailer offers. Retailer links open each store's search page; confirm current price, shipping, availability, and product details with the retailer.</p>
+        <section class="saved-products" id="saved-products-section" aria-labelledby="saved-products-title" hidden>
+          <div class="saved-products-heading">
+            <div><p class="eyebrow">YOUR ACCOUNT</p><h3 id="saved-products-title">Saved products</h3></div>
+            <button class="text-button" id="saved-products-close" type="button">Back to search</button>
+          </div>
+          <p class="saved-products-note" id="saved-products-note">Saved products are stored in this browser.</p>
+          <div class="product-grid comparison-grid" id="saved-product-grid"></div>
+          <p class="saved-products-empty" id="saved-products-empty" hidden>You haven't saved any products yet.</p>
+        </section>
+        <p class="data-disclaimer">Demo includes headphones and cameras only. Images are illustrative examples; product names, descriptions, prices, ratings, reviews, and purchase counts are fictional sample data, not retailer offers. Retailer links open each store's search page.</p>
       </section>
 
       <section class="how-section" id="how-it-works">
         <div class="how-heading"><p class="eyebrow">A BETTER WAY TO DECIDE</p><h2>Search. Compare. <em>Choose.</em></h2></div>
         <div class="steps-grid">
-          <article class="step-card"><span>01</span><i>⌕</i><h3>Search once</h3><p>Tell us what you're looking for — from clothes to home goods, tech, or wellness.</p></article>
+          <article class="step-card"><span>01</span><i>⌕</i><h3>Search once</h3><p>Try headphones or cameras in the sample comparison demo.</p></article>
           <article class="step-card"><span>02</span><i>↔</i><h3>Compare what matters</h3><p>Choose a retailer, then filter its published ratings, review counts, and recent purchases.</p></article>
           <article class="step-card"><span>03</span><i>↗</i><h3>Shop at the source</h3><p>Open the retailer's product listing to check current details and complete your purchase there.</p></article>
         </div>
@@ -160,7 +170,7 @@
         <label class="form-field">Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
         <label class="form-field">Password<input id="account-password" name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"></label>
         <button class="button button-dark account-submit" id="account-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-        <p class="account-note" id="account-note">You can compare as a guest. Account passwords are securely hashed on this server and are not sent to retailers.</p>
+        <p class="account-note" id="account-note">Demo accounts are simulated in this browser. Passwords are not saved or verified; never use a real password.</p>
         <p class="account-message" id="account-message" aria-live="polite"></p>
         <button class="text-button" id="continue-as-guest" type="button">Continue as guest</button>
         <button class="text-button account-logout" id="account-logout" type="button" hidden>Sign out</button>

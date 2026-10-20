@@ -2,6 +2,7 @@ const searchInput = document.querySelector("#search-input");
 const productGrid = document.querySelector("#product-grid");
 const noResults = document.querySelector("#no-results");
 const accountNote = document.querySelector("#account-note");
+const savedProductGrid = document.querySelector("#saved-product-grid");
 const filters = {
   retailer: document.querySelector("#retailer-filter"),
   rating: document.querySelector("#rating-filter"),
@@ -14,23 +15,56 @@ let searchQuery = "";
 let accountMode = "login";
 let currentUser = null;
 let staticDemoMode = location.protocol === "file:" || location.hostname.toLowerCase().endsWith(".github.io");
+let sessionPromise = Promise.resolve();
 let searchSequence = 0;
 let toastTimeout;
 let searchOffers = [];
 let loadedRetailers = [];
 let searchMessage = "";
+const demoAccountsKey = "goodfind.demo.accounts.v1";
+const demoSessionKey = "goodfind.demo.session.v1";
+const savedProductsKey = "goodfind.saved-products.v1";
 
 class ApiUnavailableError extends Error {}
 
 const retailerNames = ["Best Buy", "Amazon", "Target", "Walmart"];
 const demoCatalog = [
-  { name: "Wireless over-ear headphones", category: "Audio", keywords: ["wireless", "headphones", "audio", "bluetooth"], price: 79.99, rating: 4.4, reviews: 3260, purchases: 1400 },
-  { name: "Insulated stainless-steel water bottle", category: "Home & kitchen", keywords: ["water", "bottle", "insulated", "kitchen"], price: 24.99, rating: 4.6, reviews: 2180, purchases: 1100 },
-  { name: "Programmable drip coffee maker", category: "Home & kitchen", keywords: ["coffee", "maker", "kitchen", "appliance"], price: 54.99, rating: 4.2, reviews: 1540, purchases: 900 },
-  { name: "Everyday cotton T-shirt", category: "Clothing", keywords: ["clothes", "clothing", "shirt", "apparel", "cotton"], price: 18.99, rating: 4.1, reviews: 890, purchases: 600 },
-  { name: "Cordless power drill", category: "Tools", keywords: ["machinery", "drill", "tool", "power"], price: 99.99, rating: 4.5, reviews: 2760, purchases: 1300 },
-  { name: "Over-the-counter pain relief tablets", category: "Health & wellness", keywords: ["medicine", "health", "pain", "relief", "tablets"], price: 11.99, rating: 4.3, reviews: 740, purchases: 500 },
-  { name: "Lightweight everyday laptop", category: "Computers", keywords: ["laptop", "computer", "electronics"], price: 649.99, rating: 4.4, reviews: 1320, purchases: 700 }
+  {
+    name: "Cloudtone Wireless Headphones",
+    description: "Soft over-ear cushions, noise reduction, and up to 30 hours of sample battery life.",
+    category: "Headphones",
+    keywords: ["headphone", "headphones", "audio", "wireless", "bluetooth"],
+    images: [
+      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=480&q=80"
+    ],
+    offers: [
+      { price: 79.99, rating: 4.7, reviewCount: 1842, purchaseCount: 320 },
+      { price: 74.5, rating: 4.3, reviewCount: 965, purchaseCount: 1100 },
+      { price: 89.99, rating: 4.5, reviewCount: 427, purchaseCount: 85 },
+      { price: 68.88, rating: 4.1, reviewCount: 2310, purchaseCount: 640 }
+    ]
+  },
+  {
+    name: "Trailview 4K Digital Camera",
+    description: "A compact sample camera with a flip screen, image stabilization, and 4K video.",
+    category: "Cameras",
+    keywords: ["camera", "cameras", "photography", "digital", "4k"],
+    images: [
+      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?auto=format&fit=crop&w=480&q=80",
+      "https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?auto=format&fit=crop&w=480&q=80"
+    ],
+    offers: [
+      { price: 429, rating: 4.6, reviewCount: 618, purchaseCount: 74 },
+      { price: 399.95, rating: 4.2, reviewCount: 2104, purchaseCount: 280 },
+      { price: 449.99, rating: 4.8, reviewCount: 193, purchaseCount: 38 },
+      { price: 379, rating: 3.9, reviewCount: 847, purchaseCount: 156 }
+    ]
+  }
 ];
 const countFormat = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -45,6 +79,68 @@ function escapeHtml(value) {
 
 function formatCount(value) {
   return value === null || value === undefined ? "Not reported" : countFormat.format(value);
+}
+
+function readStoredJson(storage, key, fallback) {
+  let value;
+  try {
+    value = storage.getItem(key);
+  } catch (error) {
+    showToast(`Browser storage is unavailable: ${error.message}`);
+    return fallback;
+  }
+  if (value === null) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    showToast("Stored demo data could not be read. You can continue, but that data may need to be recreated.");
+    return fallback;
+  }
+}
+
+function writeStoredJson(storage, key, value) {
+  try {
+    storage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    showToast(`Could not save demo data in this browser: ${error.message}`);
+    return false;
+  }
+}
+
+function normalizedEmail(email) {
+  return email.trim().toLocaleLowerCase();
+}
+
+function getDemoAccounts() {
+  const accounts = readStoredJson(localStorage, demoAccountsKey, []);
+  if (!Array.isArray(accounts)) {
+    showToast("Stored demo account data is invalid. Create an account again to continue.");
+    return [];
+  }
+  return accounts.filter((account) => (
+    account && typeof account.email === "string" && typeof account.name === "string"
+  ));
+}
+
+function getSavedProducts(email = currentUser?.email) {
+  if (!email) return [];
+  const savedByAccount = readStoredJson(localStorage, savedProductsKey, {});
+  if (!savedByAccount || typeof savedByAccount !== "object" || Array.isArray(savedByAccount)) {
+    showToast("Stored saved-product data is invalid. New saves will be stored separately.");
+    return [];
+  }
+  const saved = savedByAccount[normalizedEmail(email)];
+  return Array.isArray(saved) ? saved.filter((offer) => offer && typeof offer.name === "string") : [];
+}
+
+function offerKey(offer) {
+  return `${offer.retailer}::${offer.name}::${offer.url}`;
+}
+
+function isOfferSaved(offer) {
+  if (!currentUser) return false;
+  return getSavedProducts().some((saved) => offerKey(saved) === offerKey(offer));
 }
 
 async function readApiJson(response) {
@@ -75,30 +171,21 @@ function retailerUrl(retailer, query) {
 
 function demoOffersForQuery(query) {
   const terms = query.toLocaleLowerCase().match(/[a-z0-9]+/g) ?? [];
-  let products = demoCatalog.filter((product) => terms.some((term) => (
+  const products = demoCatalog.filter((product) => terms.some((term) => (
     product.keywords.some((keyword) => keyword.includes(term) || term.includes(keyword))
   )));
-  if (!products.length) {
-    products = [{
-      name: `Sample ${query}`,
-      category: "Demonstration product",
-      price: 39.99,
-      rating: 4.2,
-      reviews: 320,
-      purchases: 180
-    }];
-  }
-
   return products.flatMap((product) => retailerNames.map((retailer, index) => {
-    const price = Math.max(4.99, product.price * (1 + (index - 1.5) * 0.07));
+    const offer = product.offers[index];
     return {
       name: product.name,
+      description: product.description,
       category: product.category,
+      image: product.images[index],
       retailer,
-      price: Math.round(price * 100) / 100,
-      rating: Math.max(3.5, Math.min(5, product.rating + (1 - index) * 0.1)),
-      reviewCount: Math.max(25, product.reviews + (index - 1) * 140),
-      purchaseCount: Math.max(20, product.purchases + (1 - index) * 100),
+      price: offer.price,
+      rating: offer.rating,
+      reviewCount: offer.reviewCount,
+      purchaseCount: offer.purchaseCount,
       url: retailerUrl(retailer, query)
     };
   }));
@@ -191,6 +278,7 @@ function renderResults(offers, message = "") {
   productGrid.innerHTML = matches.map((offer) => {
     const imageUrl = typeof offer.image === "string" && offer.image.startsWith("https://") ? offer.image : "";
     const retailerLink = safeRetailerUrl(offer.retailer, offer.url);
+    const saved = isOfferSaved(offer);
     const priceText = offer.price === null ? "Check retailer" : new Intl.NumberFormat("en-US", {
       style: "currency", currency: "USD"
     }).format(offer.price);
@@ -202,8 +290,10 @@ function renderResults(offers, message = "") {
           <div class="comparison-product-copy">
             <span class="product-category">${escapeHtml(offer.category)}</span>
             <h3>${escapeHtml(offer.name)}</h3>
+            <p class="comparison-description">${escapeHtml(offer.description ?? "")}</p>
             <span class="offer-badge">${staticDemoMode ? "SAMPLE DEMO DATA" : "LIVE RETAILER LISTING"}</span>
           </div>
+          <button class="save-product-button" type="button" data-save-key="${escapeHtml(offerKey(offer))}" aria-pressed="${saved}">${saved ? "Saved ✓" : "Save product +"}</button>
         </div>
         <div class="offer-details">
           <div class="retailer-name"><span class="retailer-mark">${escapeHtml(offer.retailer.slice(0, 1))}</span><strong>${escapeHtml(offer.retailer)}</strong></div>
@@ -243,6 +333,84 @@ function renderResults(offers, message = "") {
   renderRetailerSearchLinks();
 }
 
+function renderSavedProducts() {
+  if (!currentUser) return;
+  const saved = getSavedProducts();
+  savedProductGrid.innerHTML = saved.map((offer) => {
+    const retailerLink = safeRetailerUrl(offer.retailer, offer.url);
+    const priceText = offer.price === null ? "Check retailer" : new Intl.NumberFormat("en-US", {
+      style: "currency", currency: "USD"
+    }).format(offer.price);
+    const ratingText = offer.rating === null ? "Not reported" : `<span class="rating-star">★</span> ${offer.rating.toFixed(1)} <small>/ 5</small>`;
+    return `
+      <article class="comparison-card">
+        <div class="comparison-product">
+            <div class="comparison-image">${typeof offer.image === "string" && offer.image.startsWith("https://") ? `<img src="${escapeHtml(offer.image)}" alt="" loading="lazy">` : `<span class="product-placeholder" aria-hidden="true">✳</span>`}</div>
+          <div class="comparison-product-copy">
+            <span class="product-category">${escapeHtml(offer.category)}</span>
+            <h3>${escapeHtml(offer.name)}</h3>
+            <p class="comparison-description">${escapeHtml(offer.description ?? "")}</p>
+            <span class="offer-badge">${offer.demo ? "SAMPLE DEMO DATA" : "SAVED LISTING"}</span>
+          </div>
+          <button class="save-product-button" type="button" data-save-key="${escapeHtml(offerKey(offer))}" aria-pressed="true">Remove saved</button>
+        </div>
+        <div class="offer-details">
+          <div class="retailer-name"><span class="retailer-mark">${escapeHtml(offer.retailer.slice(0, 1))}</span><strong>${escapeHtml(offer.retailer)}</strong></div>
+          <div class="offer-metric offer-price"><span>${offer.demo ? "Sample price" : "Listed price"}</span><strong>${priceText}</strong></div>
+          <div class="offer-metric"><span>Rating</span><strong>${ratingText}</strong></div>
+          <div class="offer-metric"><span>Reviews</span><strong>${formatCount(offer.reviewCount)}</strong></div>
+          <div class="offer-metric"><span>Purchases</span><strong>${escapeHtml(offer.purchaseLabel ?? formatCount(offer.purchaseCount))}</strong></div>
+          <a class="retailer-link" href="${escapeHtml(retailerLink)}" target="_blank" rel="noopener noreferrer">Search at ${escapeHtml(offer.retailer)} <span aria-hidden="true">↗</span></a>
+        </div>
+      </article>`;
+  }).join("");
+  document.querySelector("#saved-products-empty").hidden = saved.length !== 0;
+  savedProductGrid.hidden = saved.length === 0;
+  document.querySelector("#saved-products-note").textContent = staticDemoMode
+    ? "Simulated account data and saved products are stored only in this browser. This is not secure authentication."
+    : "Saved products are stored in this browser for this account.";
+}
+
+function saveOffer(offer) {
+  if (!currentUser) {
+    openAccount();
+    document.querySelector("#account-message").textContent = "Create an account or sign in to save products. Guests can keep searching without an account.";
+    return;
+  }
+  const savedByAccount = readStoredJson(localStorage, savedProductsKey, {});
+  if (!savedByAccount || typeof savedByAccount !== "object" || Array.isArray(savedByAccount)) {
+    showToast("Saved-product data is invalid. Your product was not saved.");
+    return;
+  }
+  const email = normalizedEmail(currentUser.email);
+  const accountSaved = Array.isArray(savedByAccount[email]) ? savedByAccount[email] : [];
+  const key = offerKey(offer);
+  const existingIndex = accountSaved.findIndex((saved) => offerKey(saved) === key);
+  if (existingIndex >= 0) {
+    accountSaved.splice(existingIndex, 1);
+  } else {
+    accountSaved.push({
+      name: offer.name,
+      category: offer.category,
+      description: offer.description,
+      image: offer.image,
+      retailer: offer.retailer,
+      price: offer.price,
+      rating: offer.rating,
+      reviewCount: offer.reviewCount,
+      purchaseCount: offer.purchaseCount,
+      purchaseLabel: offer.purchaseLabel,
+      url: offer.url,
+      demo: staticDemoMode
+    });
+  }
+  savedByAccount[email] = accountSaved;
+  if (!writeStoredJson(localStorage, savedProductsKey, savedByAccount)) return;
+  renderResults(searchOffers, searchMessage);
+  if (!document.querySelector("#saved-products-section").hidden) renderSavedProducts();
+  updateAccountButton();
+}
+
 function renderExternalRetailerSearch(retailer) {
   searchSequence++;
   const message = `${retailer} results are opened on the retailer's website; this prototype does not extract that store's listings.`;
@@ -255,10 +423,19 @@ function renderExternalRetailerSearch(retailer) {
 
 function activateDemoMode() {
   staticDemoMode = true;
-  currentUser = null;
+  if (!currentUser) {
+    const activeEmail = readStoredJson(sessionStorage, demoSessionKey, "");
+    if (typeof activeEmail === "string") {
+      const account = getDemoAccounts().find((savedAccount) => savedAccount.email === activeEmail);
+      currentUser = account ? { ...account, simulated: true } : null;
+    }
+  }
+  document.querySelector("#account-password").autocomplete = "off";
   updateAccountButton();
-  accountNote.textContent = "Accounts need the Goodfind server. Search and compare are available here as a guest.";
+  accountNote.textContent = "Simulated demo accounts are stored in this browser. Passwords are not saved or verified; never use a real password.";
   document.querySelector(".data-disclaimer").textContent = "Demonstration sample data only — prices, ratings, reviews, and purchase counts are fictional and are not current retailer offers. Retailer links open each store's search page. Search and comparison are available without an account.";
+  document.querySelector("#saved-products-open").title = "View products saved to this browser demo account";
+  if (currentUser) renderSavedProducts();
   setStatus("GitHub Pages uses fictional demonstration data. Search and compare as a guest.", "demo");
 }
 
@@ -266,7 +443,9 @@ function renderDemoResults(sequence, query) {
   if (sequence !== searchSequence) return;
   searchOffers = demoOffersForQuery(query);
   loadedRetailers = retailerNames;
-  searchMessage = "Demonstration sample data only. These listings and figures are fictional and are not current retailer offers. Retailer links open each store's search page.";
+  searchMessage = searchOffers.length
+    ? "Demonstration sample data only. Product images are examples, and the names, prices, ratings, reviews, and purchase counts are fictional. Retailer links open each store's search page."
+    : "This demo includes sample headphones and cameras. Try searching for headphones or cameras.";
   setStatus(searchMessage, "demo");
   renderResults(searchOffers, searchMessage);
 }
@@ -356,7 +535,9 @@ function setAccountMode(mode) {
   document.querySelector("#account-title").textContent = registering ? "Create your account." : "Welcome back.";
   document.querySelector("#account-submit").innerHTML = `${registering ? "Create account" : "Sign in"} <span aria-hidden="true">→</span>`;
   document.querySelector("#account-message").textContent = "";
-  document.querySelector("#account-password").autocomplete = registering ? "new-password" : "current-password";
+  document.querySelector("#account-password").autocomplete = staticDemoMode
+    ? "off"
+    : registering ? "new-password" : "current-password";
 }
 
 function updateAccountButton() {
@@ -364,6 +545,13 @@ function updateAccountButton() {
   document.querySelector("#account-label").textContent = currentUser ? currentUser.name : "Sign in";
   button.title = currentUser ? "Account options" : "Sign in or create an account";
   document.querySelector("#account-logout").hidden = !currentUser;
+  document.querySelector("#continue-as-guest").hidden = Boolean(currentUser);
+  const savedButton = document.querySelector("#saved-products-open");
+  savedButton.hidden = !currentUser;
+  if (currentUser) {
+    const count = getSavedProducts().length;
+    savedButton.textContent = count ? `Saved products (${count})` : "Saved products";
+  }
 }
 
 function closeAccount() {
@@ -384,7 +572,61 @@ function openAccount() {
   document.body.classList.add("modal-open");
   accountModal.classList.add("is-open");
   accountModal.setAttribute("aria-hidden", "false");
-  document.querySelector("#account-form input").focus();
+  document.querySelector('#account-form input[name="email"]').focus();
+}
+
+function completeDemoAccountAction(form) {
+  const email = normalizedEmail(form.elements.email.value);
+  const password = form.elements.password.value;
+  const message = document.querySelector("#account-message");
+  if (password.length < 8) {
+    message.textContent = "Use a demo password with at least 8 characters.";
+    return;
+  }
+
+  const accounts = getDemoAccounts();
+  let account;
+  if (accountMode === "register") {
+    if (accounts.some((existing) => existing.email === email)) {
+      message.textContent = "A demo account already exists for this email. Sign in instead.";
+      return;
+    }
+    account = { email, name: form.elements.name.value.trim() };
+    if (!writeStoredJson(localStorage, demoAccountsKey, [...accounts, account])) {
+      message.textContent = "The demo account could not be stored in this browser.";
+      return;
+    }
+  } else {
+    account = accounts.find((existing) => existing.email === email);
+    if (!account) {
+      message.textContent = "No demo account was found for this email. Create an account first.";
+      return;
+    }
+  }
+
+  currentUser = { ...account, simulated: true };
+  writeStoredJson(sessionStorage, demoSessionKey, email);
+  form.elements.password.value = "";
+  updateAccountButton();
+  closeAccount();
+  if (searchOffers.length) renderResults(searchOffers, searchMessage);
+  renderSavedProducts();
+  showToast(accountMode === "register" ? "Demo account created. No password was stored." : "Signed in to the local demo account.");
+}
+
+function openSavedProducts() {
+  if (!currentUser) return;
+  renderSavedProducts();
+  document.querySelector("#saved-products-section").hidden = false;
+  document.querySelector("#saved-products-section").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleSaveButton(event) {
+  const button = event.target.closest("[data-save-key]");
+  if (!button) return;
+  const key = button.dataset.saveKey;
+  const offer = [...searchOffers, ...getSavedProducts()].find((item) => offerKey(item) === key);
+  if (offer) saveOffer(offer);
 }
 
 function showToast(message) {
@@ -409,6 +651,7 @@ async function refreshSession() {
     if (!response.ok) throw new Error("Could not check account session.");
     const result = await readApiJson(response);
     currentUser = result.user;
+    accountNote.textContent = "Your account is managed by the Goodfind server. Passwords are never sent to retailers.";
     updateAccountButton();
   } catch (error) {
     if (error instanceof ApiUnavailableError || error instanceof TypeError) {
@@ -478,11 +721,12 @@ document.querySelectorAll(".account-tab").forEach((tab) => {
 document.querySelector("#account-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+  await sessionPromise;
+  if (!form.reportValidity()) return;
   if (staticDemoMode) {
-    document.querySelector("#account-message").textContent = "Accounts are unavailable in this static demo. You can search and compare as a guest.";
+    completeDemoAccountAction(form);
     return;
   }
-  if (!form.reportValidity()) return;
   const button = document.querySelector("#account-submit");
   button.disabled = true;
   document.querySelector("#account-message").textContent = "Checking your account…";
@@ -506,7 +750,7 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
   } catch (error) {
     if (error instanceof ApiUnavailableError || error instanceof TypeError) {
       activateDemoMode();
-      document.querySelector("#account-message").textContent = "Accounts are unavailable in this static demo. You can search and compare as a guest.";
+      completeDemoAccountAction(form);
       return;
     }
     document.querySelector("#account-message").textContent = error.message;
@@ -516,12 +760,25 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
 });
 
 document.querySelector("#account-logout").addEventListener("click", async () => {
-  if (staticDemoMode) return;
+  if (staticDemoMode || currentUser?.simulated) {
+    try {
+      sessionStorage.removeItem(demoSessionKey);
+    } catch (error) {
+      showToast(`Could not clear the demo session: ${error.message}`);
+    }
+    currentUser = null;
+    updateAccountButton();
+    document.querySelector("#saved-products-section").hidden = true;
+    closeAccount();
+    showToast("Signed out of the demo account. Your saved products remain in this browser.");
+    return;
+  }
   try {
     const response = await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     if (!response.ok) throw new Error("Sign out failed. Please try again.");
     currentUser = null;
     updateAccountButton();
+    document.querySelector("#saved-products-section").hidden = true;
     closeAccount();
     searchSequence++;
     searchInput.value = "";
@@ -542,10 +799,18 @@ document.querySelector("#account-logout").addEventListener("click", async () => 
   }
 });
 
+productGrid.addEventListener("click", handleSaveButton);
+savedProductGrid.addEventListener("click", handleSaveButton);
+document.querySelector("#saved-products-open").addEventListener("click", openSavedProducts);
+document.querySelector("#saved-products-close").addEventListener("click", () => {
+  document.querySelector("#saved-products-section").hidden = true;
+  document.querySelector("#results").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector("#account-modal").classList.contains("is-open")) closeAccount();
 });
 
 if (staticDemoMode) activateDemoMode();
 displayEmpty("Start with a product search.", "Enter a product to search retailer listings. You can compare as a guest or sign in for an account. Nothing is pre-filled with sample offers.");
-refreshSession();
+sessionPromise = refreshSession();
