@@ -1,0 +1,17 @@
+{
+  "name": "goodfind-comparison",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "description": "Local product comparison website with live retailer search",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "robots-parser": "^3.0.1"
+  }
+}
